@@ -1,142 +1,117 @@
-# Ca2+ Imaging Analysis for C2C12 Myotubes
+# YAP-and-TAZ-knockdown-in-C2C12-myotubes
 
-This repository contains scripts used for:
+This repository contains analysis scripts associated with the study of YAP and TAZ knockdown in differentiated C2C12 myotubes.
 
-1. creating aligned 2x2 comparison videos from time-lapse TIFF image sequences
-2. calculating Ca2+ kinetics from fluorescence time-series data stored in Excel workbooks
+The code is organized into three analysis modules:
 
-The analysis was performed on C2C12 myotubes under electrical pulse stimulation and was used to compare `siScr`, `siYAP`, `siTAZ`, and `siYAPsiTAZ` conditions.
+- **Calcium kinetics**: analysis of electrically evoked Ca2+ responses in C2C12 myotubes
+- **MitobrightRed to Calcein signal ratio**: image-based normalization of mitochondrial signal
+- **siRNA specificity**: in silico and RNA-seq-based analyses related to siRNA specificity and seed-associated transcriptome shifts
 
-## Files
+This repository is intended as a transparent record of the analysis workflows used in the study. It should be regarded as a project code repository rather than as a fully automated end-to-end software package.
 
-- `create_aligned_calcium_response_video.py`
-  - Creates an aligned 2x2 MP4 video from four TIFF frame folders.
+---
+
+## Repository structure
+
+```text
+.
+├── Calcium kinetics/
+├── MitobrightRed to Calcein signal ratio/
+└── siRNA specificity/
+```
+
+---
+
+## Module overview
+
+### 1. Calcium kinetics
+
+This folder contains scripts for Ca2+ imaging analysis in electrically stimulated C2C12 myotubes.
+
+The folder currently includes:
+
+- `README.md`
 - `calculate_calcium_kinetics_from_excel.py`
-  - Extracts time-series traces from the Excel analysis workbook and calculates per-replicate Ca2+ kinetics.
-- `Analysis_20250326_210022.xlsx`
-  - Excel workbook containing the fluorescence time-series data used for kinetics analysis.
 
-## Requirements
+According to the folder-specific documentation, this module is used to calculate replicate-level Ca2+ kinetic parameters from fluorescence time-series data exported to Excel workbooks.
 
-- Python 3.13.1
-- `numpy` 2.2.0
-- `imageio` 2.37.3
-- `Pillow` 12.2.0
-- `openpyxl` 3.1.5
-- FFmpeg 7.1
+Typical output metrics include:
 
-Install Python packages with:
+- mean rise slope
+- mean decay slope
+- mean time to peak
+- mean apparent decay tau
+- number of detected events per replicate
 
-```bash
-python3 -m pip install numpy imageio pillow openpyxl
-```
+Please see the folder-specific `README.md` for expected input layout and usage details.
 
-## Input Data Layout
+### 2. MitobrightRed to Calcein signal ratio
 
-Each movie condition is expected to be stored in a folder named:
+This folder contains a simple image-based workflow to estimate normalized mitochondrial signal from TIFF images.
 
-```text
-<sample_name>.tif.frames
-```
+The folder currently includes:
 
-For example:
+- `README.md`
+- `calculate_c003_to_c002_signal_ratios.py`
 
-```text
-siScr-1.tif.frames
-siYAP-1.tif.frames
-siTAZ-1.tif.frames
-siYAPsiTAZ-1.tif.frames
-```
+In this workflow:
 
-Each folder should contain sequential TIFF frames named like:
+- `C002T001` is treated as the Calcein channel
+- `C003T001` is treated as the MitoBrightRed channel
+- the mean MitoBrightRed intensity is divided by the mean Calcein intensity
 
-```text
-siScr-1_T001.tif
-siScr-1_T002.tif
-...
-siScr-1_T500.tif
-```
+The output is intended as a **field-level normalized proxy** for mitochondrial signal, not a segmented per-cell measurement.
 
-## 1. Create an Aligned Comparison Video
+### 3. siRNA specificity
 
-`create_aligned_calcium_response_video.py` creates a 2x2 composite video using the original TIFF images.
+This folder contains R and Python scripts for siRNA specificity analysis and RNA-seq support analyses.
 
-### What it does
+The folder currently includes:
 
-- loads four image sequences
-- detects repeated peaks from the mean green-channel signal
-- applies user-specified starting frames
-- creates a labeled 2x2 comparison movie
+- `00_run_full_rnaseq_and_sirna_workflow.R`
+- `01_run_workflow_on_alternate_count_matrix.R`
+- `02_workflow_helper_functions.R`
+- `10_build_sirna_seed_and_utr_annotations.py`
+- `11_analyze_single_knockdown_seed_shift_cdfs.R`
+- `12_analyze_double_knockdown_seed_shift_cdfs.R`
+- `13_summarize_cdf_shift_metrics_across_seed_lengths.R`
+- `14_compare_observed_seed_effects_against_null_seeds.R`
+- `15_test_on_target_confounding_of_seed_effects.R`
+- `16_generate_seed_length_specific_outputs.py`
+- `17_recompute_seed_annotations_for_selected_seed_length.py`
+- `README.md`
 
-### Example
+These scripts support analyses such as:
 
-```bash
-python3 create_aligned_calcium_response_video.py \
-  --panels siScr-1 siYAP-1 siTAZ-1 siYAPsiTAZ-1 \
-  --starts 20 19 21 19 \
-  --output aligned_peak_quad_full.mp4 \
-  --title "Ca2+ Responses of C2C12 Myotubes to Electrical Pulse Stimulation"
-```
+- siRNA seed and 3′UTR annotation
+- seed-match-based CDF analyses
+- single- and double-knockdown transcriptome shift analysis
+- sensitivity analyses using null seeds
+- evaluation of possible on-target confounding
 
-### Arguments
+Please see the folder-specific `README.md` for the recommended script order and project-specific notes.
 
-- `--panels`
-  - Four sample labels.
-- `--starts`
-  - Four starting frame numbers, 1-based, corresponding to the samples in `--panels`.
-- `--output`
-  - Output MP4 file name.
-- `--title`
-  - Title displayed at the top of the movie.
+---
 
-## 2. Calculate Ca2+ Kinetics from Excel
+## Software
 
-`calculate_calcium_kinetics_from_excel.py` reads the normalized time-series traces from the Excel workbook and writes replicate-level metrics to CSV.
+This repository contains both **Python** and **R** scripts.
 
-### What it calculates
+### Python
+Different modules use packages such as:
 
-For each replicate:
+- `numpy`
+- `openpyxl`
+- `Pillow`
+- `imageio`
 
-- `rise_slope_mean`
-- `decay_slope_mean`
-- `time_to_peak_mean_s`
-- `decay_tau_mean_s`
-- `n_events`
+Some workflows may also use **FFmpeg**, as described in the folder-level documentation.
 
-### Definitions
+### R
+The siRNA specificity workflow is implemented mainly in **R**, with Python helper scripts used for annotation and preprocessing.
 
-- `rise_slope_mean`
-  - Mean slope from the preceding trough to the peak.
-- `decay_slope_mean`
-  - Mean slope from the peak to the following trough.
-- `time_to_peak_mean_s`
-  - Mean time from the preceding trough to the peak.
-- `decay_tau_mean_s`
-  - Mean apparent decay time constant, defined here as the time for the signal to fall to `1/e` of the peak-to-trough amplitude during the decay phase.
+Please check the `README.md` inside each subdirectory for module-specific requirements and usage details.
 
-### Example
+---
 
-```bash
-python3 calculate_calcium_kinetics_from_excel.py
-```
-
-This writes:
-
-```text
-ca_kinetics_per_replicate.csv
-```
-
-## Output CSV
-
-The output CSV contains the following columns:
-
-```text
-replicate,group,n_events,rise_slope_mean,decay_slope_mean,time_to_peak_mean_s,decay_tau_mean_s
-```
-
-## Notes
-
-- The video script uses the original TIFF frames directly to minimize image-quality loss.
-- The kinetics analysis currently uses the `Sheet1` time-series data in `Analysis_20250326_210022.xlsx`.
-- Peak and trough detection is based on local extrema with a minimum gap of 5 frames.
-- `decay_tau_mean_s` is an apparent decay constant derived from the observed trace and is not a full exponential-fit parameter.
