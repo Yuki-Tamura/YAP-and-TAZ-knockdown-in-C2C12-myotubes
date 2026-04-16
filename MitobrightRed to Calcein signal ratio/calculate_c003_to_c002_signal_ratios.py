@@ -15,8 +15,7 @@ from openpyxl import Workbook
 from PIL import Image
 
 
-ROOT_DIR = Path(__file__).resolve().parent
-OUTPUT_FILE = ROOT_DIR / "C003_div_C002_signal_summary.xlsx"
+SCRIPT_DIR = Path(__file__).resolve().parent
 
 
 def natural_sort_key(text: str) -> list[object]:
@@ -31,6 +30,17 @@ def calculate_mean_intensity(image_path: Path) -> float:
 def list_image_folders(root_dir: Path) -> list[Path]:
     image_folders = (path for path in root_dir.iterdir() if path.is_dir() and path.name.endswith(".tif.frames"))
     return sorted(image_folders, key=lambda path: natural_sort_key(path.name))
+
+
+def resolve_data_root(script_dir: Path) -> Path:
+    if list_image_folders(script_dir):
+        return script_dir
+
+    parent_dir = script_dir.parent
+    if list_image_folders(parent_dir):
+        return parent_dir
+
+    raise FileNotFoundError("No '*.tif.frames' folders were found next to the script or in its parent directory.")
 
 
 def build_summary_workbook() -> Workbook:
@@ -77,14 +87,16 @@ def format_numeric_columns(worksheet) -> None:
 
 
 def main() -> None:
+    data_root = resolve_data_root(SCRIPT_DIR)
+    output_file = data_root / "C003_div_C002_signal_summary.xlsx"
     workbook = build_summary_workbook()
     worksheet = workbook["Summary"]
 
-    for folder_path in list_image_folders(ROOT_DIR):
+    for folder_path in list_image_folders(data_root):
         append_folder_result(worksheet, folder_path)
 
     format_numeric_columns(worksheet)
-    workbook.save(OUTPUT_FILE)
+    workbook.save(output_file)
 
 
 if __name__ == "__main__":
